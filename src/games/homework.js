@@ -1,105 +1,151 @@
-//You might have some game state so you can keep track of
-//what is happening:
-let score;  //The players score
-let alive;  //is the 
+//The y velocity of the hero
+let yVelocity;
 
-//You might have some constants that you use
-const speed = 300;  //In pixels per second
+//True when the hero is dead
+let dead;
 
-//This is a helper function to compute the distance
-//between two sprites
-function distance(a, b) {
-    let dx = a.x - b.x;
-    let dy = a.y - b.y;
-    return Math.sqrt(dx * dx + dy * dy);
-}
+//Initial score is zero
+let score;
 
-//This setup function is called once when the game starts
+
+
+//This setup function is called once
+//So you can set everything up.
 function setup(sprites) {
-    score = 0;      //set score to zero
-    alive = true;   //Set player to alive
+    yVelocity = 0;
+    score = 0;
+    dead = false;
 
-    //Sprite "Images" are just characters,
-    //But you can use emojis!
-    // https://emojis.wiki/
+    //Make sprite zero a little person at 0,0
+    sprites[0].image = "🦍";
+    sprites[0].x = 0;
+    sprites[0].y = 0;
 
-    sprites[0].image = "🚒"; //A fire engine
-    sprites[0].x = 100;
-    sprites[0].y = 100;
-
-    //Putting two sprites together you
-    //can make more complicated things.
-    sprites[1].image = "🏠"; //A fire engine
-    sprites[1].x = 300;
-    sprites[1].y = 100;
-    sprites[2].image = "🔥"; //A fire engine
-    sprites[2].x = 300;
-    sprites[2].y = 120;
-
+    //Sprites are boy and hunter
+    for (let i = 1; i < 4; i++) {
+        sprites[i].image = "👦";
+        sprites[i].y = 0;
+        sprites[i].x = 300 * i; //Spread 300px apart
+    }
 }
 
 /**
- * This function is called every frame
+ * Game function called every frame
  * @param sprites   Array of sprite objects
- * @param t         Seconds since start of game
- * @param dt        Seconds since last frame (A very small number)
- * @param up        Is up arrow pressed?
+ * @param t         Time since start of game
+ * @param dt        Time since last frame
+ * @param up        Is up pressed?
  * @param down      "
  * @param left      "
  * @param right     "
- * @param space     Is spacebar pressed?
+ * @param space     "
  * @returns The current score
  */
 function frame(sprites, t, dt, up, down, left, right, space) {
-    //Keep references to the sprites in some variables with
-    //better names:
-    const truck = sprites[0]; //Easier to remember
-    const house = sprites[1]; //Easier to remember
-    const fire = sprites[2]; //Easier to remember
 
-    //Move the fire engine
-    if (up) {
-        //Speed is in pixels per second, and
-        //dt is the number of seconds that have
-        //passed since the last frame.
-        //
-        //Multiply them together so that the
-        //truck moves at the same speed if the
-        //computer is fast or slow
-        truck.y += speed * dt;
-    } 
-    if (down) {
-        truck.y -= speed * dt;
+
+    if (dead) {
+        //If the hero is dead do nothing until they hit space
+        if (space) {
+            //reset the score, being to life, lift up in the air
+            score = 0;
+            dead = false;
+            sprites[0].y = 150;
+        }
+        return score;
     }
+
+    //Pressing right or left?
+    //Move the man.
     if (right) {
-        truck.x += speed * dt;
-        //You can flipH a spright so it is facing
-        //the other direction
-        truck.flipH = true;
-    }
-    if (left) {
-        truck.x -= speed * dt;
-        truck.flipH = false;
+        sprites[0].x += dt * 500;
+        sprites[0].flipH = true; //And flipH his sprite if he is going right
+    } else if (left) {
+        sprites[0].x -= dt * 500;
+        sprites[0].flipH = false;
     }
 
-    //If the truck is close to the house
-    if ( distance(truck, house) < 10 ){
-        fire.image = ""; //Make the fire go away
+    //If you try to run past the ends of the screen
+    //it stips you
+    if (sprites[0].x < 0)
+        sprites[0].x = 0;
+    if (sprites[0].x > 750)
+        sprites[0].x = 750;
+        
+    if (left || right) {
+        //If we are moving left or right
+        if (sprites[0].y > 0) {
+            //In the air? Always a running man
+            sprites[0].image = "🦍";
+        } else {
+            //Otherwise swap between two poses
+            sprites[0].image = (Math.round(t * 10) % 2) ? "🦍" : "🦍";
+        }
+    } else {
+        //Staying still? Use still person
+        sprites[0].image = "🦍";
     }
 
-    //A very simple repeating animation
-    sprites[2].y += Math.sin(t)/10;
+
+    //If up pressed, and on the ground,
+    //jump, give hero a positive velocity
+    if (up && sprites[0].y == 0) {
+        yVelocity = 500;
+    }
+
+    //Move hero by y velocity
+    sprites[0].y += yVelocity * dt;
+
+    //Update y velocity
+    if (sprites[0].y > 0) {
+        //If he is in the air, decrease his
+        //y velocity
+        yVelocity = yVelocity - 1500 * dt;
+    } else {
+        //When he is at the ground, set it 0
+        yVelocity = 0;
+        sprites[0].y = 0;
+    }
+
+
+    //Move badgers
+    for (let i = 1; i < 4; i++) {
+        //Move each badger. Add some speed based on i
+        //so they all go different speeds, and add some
+        //speed based on your score
+        sprites[i].x -= dt * (400 + 30 * i + 10 * score);
+
+        //If a badter goes off the left hand side
+        if (sprites[i].x < -50) {
+            //Move him back off the right hand side
+            sprites[i].x = 800 + Math.random() * 400;
+            score++; //Increase the score
+        }
+        //Make them bounce up and down a little
+        sprites[i].y = Math.sin(20 * t + 10 * i);
+    }
+
+    //Check each badger to see if it hits the hero
+    for (let i = 1; i < 4; i++) {
+        let dMan = Math.abs(sprites[i].x - sprites[0].x);
+        if (dMan < 10 && sprites[0].y < 30) {
+            //Too close? hero dead!
+            dead = true;
+            sprites[0].image = "☠️";
+        }
+    }
 
     return score;
 };
 
 export default {
-    name: "Homework",
-    instructions: "Write your instructions here",
-    icon: "📝", //Choose an emoji icon
+    name: "Harambe",
+    instructions: "Rest in Peace King Harambe.",
+    icon: "🦍",
     background: {
-        //You can put CSS here to change your background
-        "background-color": "#555"
+        //A more complicated background
+        "background-color": "Brown",
+        "border-bottom": "50px solid skyblue"
     },
     frame,
     setup,
