@@ -113,7 +113,7 @@ function frame(sprites, t, dt, up, down, left, right, space) {
         //Move each badger. Add some speed based on i
         //so they all go different speeds, and add some
         //speed based on your score
-        sprites[i].x -= dt * (400 + 30 * i + 10 * score);
+        sprites[i].x -= dt * (400 + 30 * i + 50 * score);
 
         //If a badter goes off the left hand side
         if (sprites[i].x < -50) {
